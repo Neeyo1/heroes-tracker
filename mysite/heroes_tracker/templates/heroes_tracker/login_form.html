@@ -1,0 +1,20 @@
+<form action="" method="post">
+    {% csrf_token %}
+    <p>
+        <input type="text", name="username", placeholder="Enter username">
+    </p>
+    <p>
+        <input type="password", name="password", placeholder="Enter password">
+    </p>
+    <p>
+        <input type="submit" value="Login">
+    </p>
+    <p>
+        Don't have an account? <a href="{% url 'register_to_page' %}?next={{request.GET.next}}">Register</a>
+    </p>
+    {% if error_message %}
+        <p>
+            {{ error_message }}
+        </p>
+    {% endif %}
+</form>

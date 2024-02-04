@@ -10,7 +10,7 @@ class MapGroupForm(forms.ModelForm):
 class MapForm(forms.ModelForm):
     class Meta:
         model = Map
-        fields = ['name', 'description', 'updated_at', 'updated_by', 'map_group']
+        fields = ['name', 'description', 'map_group']
 
 class HeroForm(forms.ModelForm):
     class Meta:

@@ -5,6 +5,16 @@
     <title>Home page</title>
 </head>
 <body>
-    Home page
+    {% if request.user.is_authenticated %}
+        <div>
+            Hi {{ request.user }}
+        </div>
+        <div>
+            <a href="{% url 'logout_from_page' %}?next={{ request.path }}">Logout</a>
+        </div>
+    {% else %}
+        <a href="{% url 'login_to_page' %}?next={{ request.path }}">Login</a>
+        <a href="{% url 'register_to_page' %}?next={{ request.path }}">Register</a>
+    {% endif%}
 </body>
 </html>
