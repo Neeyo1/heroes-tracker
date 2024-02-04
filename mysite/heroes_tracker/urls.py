@@ -12,5 +12,5 @@ urlpatterns = [
     #register
     path("register/", views.register_to_page, name="register_to_page"),
     #testing page
-    path("<str:clan_name>/", views.testing_page, name="testing_page"),
+    path("websocket/<str:clan_name>/", views.testing_page, name="testing_page"),
 ]
