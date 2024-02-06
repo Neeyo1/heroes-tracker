@@ -1,12 +1,18 @@
 import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
-
+from .models import MapGroup, Map, Hero
+from django.core.serializers import serialize
+from asgiref.sync import sync_to_async
+from django.forms.models import model_to_dict
+from rest_framework.renderers import JSONRenderer
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.clan_name = self.scope["url_route"]["kwargs"]["clan_name"]
         self.room_group_name = f"chat_{self.clan_name}"
+        self.user = self.scope["user"]
+        print(self.user)
 
         # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
@@ -21,11 +27,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         message = text_data_json["message"]
-
-        # Send message to room group
-        await self.channel_layer.group_send(
-            self.room_group_name, {"type": "chat.message", "message": message}
-        )
+        if message == "get_data":
+            await self.channel_layer.group_send(
+                self.room_group_name, {"type": "chat.get.data", "message": "get some data from db"}
+            )
+        elif message == "set_data":
+            await self.channel_layer.group_send(
+                self.room_group_name, {"type": "chat.set.data", "message": "set some data to db"}
+            )
+        elif message == "user":
+            await self.channel_layer.group_send(
+                self.room_group_name, {"type": "chat.user"}
+            )
+        else:
+            await self.channel_layer.group_send(
+                self.room_group_name, {"type": "chat.message", "message": message}
+            )
 
     # Receive message from room group
     async def chat_message(self, event):
@@ -33,3 +50,40 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # Send message to WebSocket
         await self.send(text_data=json.dumps({"message": message}))
+
+    async def chat_get_data(self, event):
+        
+        message = await sync_to_async(self.get_data_from_db)()
+
+        # Send message to WebSocket
+        await self.send(text_data=json.dumps({"message": message}))
+
+    async def chat_set_data(self, event):
+        message = event["message"]
+
+        # Send message to WebSocket
+        await self.send(text_data=json.dumps({"message": message}))
+
+    async def chat_user(self, event):
+        message = self.user.username
+
+        # Send message to WebSocket
+        await self.send(text_data=json.dumps({"message": message}))
+
+    def get_data_from_db(self):
+        #print(Hero.objects.all().__dict__)
+        data_dict = {}
+        hero_index = 0
+        heroes = Hero.objects.all()
+        for hero in heroes:
+            data_dict[hero_index] = {"name": hero.name, "lvl": hero.lvl, "maps": {}}
+            maps = hero.maps.all()
+            map_list = {}
+            for map in maps:
+                if map.map_group.name not in map_list:
+                    map_list[map.map_group.name] = map.name
+                else:
+                    map_list[map.map_group.name] = {map_list[map.map_group.name], map.name}
+            data_dict[hero_index]['maps']= map_list
+            hero_index += 1
+        return str(data_dict)
