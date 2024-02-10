@@ -94,7 +94,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 maps_all.append(map.name)    #for client side to track only specific maps
             data_dict[hero_index]['maps']= map_list
             hero_index += 1
-        return str(data_dict), maps_all
+        return data_dict, maps_all
     
     def set_data_to_db(self, map_name):
         date_now = datetime.now(timezone.utc)
