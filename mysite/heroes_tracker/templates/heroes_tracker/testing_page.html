@@ -11,7 +11,7 @@
     {{ clan_name|json_script:"clan-name" }}
     <input id="set-data" type="button" value="set_data">
     <input id="get-data" type="button" value="get_data">
-    <input id="user" type="button" value="user">
+    <input id="get-user" type="button" value="get_user">
     <script>
         const clanName = JSON.parse(document.getElementById('clan-name').textContent);
 
@@ -62,9 +62,9 @@
             }));
         };
 
-        document.querySelector('#user').onclick = function(e) {
+        document.querySelector('#get-user').onclick = function(e) {
             chatSocket.send(JSON.stringify({
-                'action': 'user'
+                'action': 'get_user'
             }));
         };
     </script>

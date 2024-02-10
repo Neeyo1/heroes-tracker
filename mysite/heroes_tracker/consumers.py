@@ -38,9 +38,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_send(
                 self.room_group_name, {"type": "chat.set.data", "map": map}
             )
-        elif action == "user":
+        elif action == "get_user":
             await self.channel_layer.group_send(
-                self.room_group_name, {"type": "chat.user"}
+                self.room_group_name, {"type": "chat.get.user"}
             )
         #else:
         #    await self.channel_layer.group_send(
@@ -56,10 +56,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def chat_get_data(self, event):
         
-        message = await sync_to_async(self.get_data_from_db)()
+        all_data, all_maps = await sync_to_async(self.get_data_from_db)()
 
         # Send message to WebSocket
-        await self.send(text_data=json.dumps({"action": "all_data", "message": message}))
+        await self.send(text_data=json.dumps({"action": "all_data", "message": all_data}))
+        await self.send(text_data=json.dumps({"action": "all_maps", "message": all_maps}))
 
     async def chat_set_data(self, event):
         map_updated = await sync_to_async(self.set_data_to_db)(event["map"])
@@ -67,7 +68,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Send message to WebSocket
         await self.send(text_data=json.dumps({"action": "single_data", "message": map_updated}))
 
-    async def chat_user(self, event):
+    async def chat_get_user(self, event):
         message = self.user.username
 
         # Send message to WebSocket
@@ -79,19 +80,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
         hero_index = 0
         heroes = Hero.objects.all()
         date_now = datetime.now(timezone.utc)
+        maps_all = []   #for client side to track only specific maps
         for hero in heroes:
             data_dict[hero_index] = {"name": hero.name, "lvl": hero.lvl, "maps": {}}
             maps = hero.maps.all()
             map_list = {}
             for map in maps:
                 if map.map_group.name not in map_list:
-                    map_list[map.map_group.name] = {0: {'name': map.name, 'updated_by': map.updated_by, 'updated_at': int((date_now - map.updated_at).total_seconds())}}
+                    map_list[map.map_group.name] = {0: {'name': map.name, 'updated_by': map.updated_by.username, 'updated_at': int((date_now - map.updated_at).total_seconds())}}
                 else:
                     map_index = len(map_list[map.map_group.name])
-                    map_list[map.map_group.name][map_index] = {'name': map.name, 'updated_by': map.updated_by, 'updated_at': int((date_now - map.updated_at).total_seconds())}
+                    map_list[map.map_group.name][map_index] = {'name': map.name, 'updated_by': map.updated_by.username, 'updated_at': int((date_now - map.updated_at).total_seconds())}
+                maps_all.append(map.name)    #for client side to track only specific maps
             data_dict[hero_index]['maps']= map_list
             hero_index += 1
-        return str(data_dict)
+        return str(data_dict), maps_all
     
     def set_data_to_db(self, map_name):
         date_now = datetime.now(timezone.utc)
