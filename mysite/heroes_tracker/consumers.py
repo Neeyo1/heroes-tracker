@@ -29,9 +29,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         text_data_json = json.loads(text_data)
         message = text_data_json["message"]
         if message == "get_data":
-            await self.channel_layer.group_send(
-                self.room_group_name, {"type": "chat.get.data", "message": "get some data from db"}
-            )
+            #await self.channel_layer.group_send(
+            #    self.room_group_name, {"type": "chat.get.data", "message": "get some data from db"}
+            #)
+            await self.chat_get_data(self)
         elif message == "set_data":
             map = text_data_json["map"]
             await self.channel_layer.group_send(
@@ -53,7 +54,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Send message to WebSocket
         await self.send(text_data=json.dumps({"message": message}))
 
-    async def chat_get_data(self, event):
+    async def chat_get_data(self, event = None):
         
         message = await sync_to_async(self.get_data_from_db)()
 
