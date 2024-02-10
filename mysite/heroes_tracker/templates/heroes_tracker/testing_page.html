@@ -9,6 +9,7 @@
     <input id="message-input" type="text" size="100"><br>
     <input id="message-submit" type="button" value="Send">
     {{ clan_name|json_script:"clan-name" }}
+    <input id="set-data" type="button" value="send_data">
     <script>
         const clanName = JSON.parse(document.getElementById('clan-name').textContent);
 
@@ -43,6 +44,13 @@
                 'message': message
             }));
             messageInputDom.value = '';
+        };
+
+        document.querySelector('#set-data').onclick = function(e) {
+            chatSocket.send(JSON.stringify({
+                'message': 'set_data',
+                'map': 'Ithan'
+            }));
         };
     </script>
 </body>

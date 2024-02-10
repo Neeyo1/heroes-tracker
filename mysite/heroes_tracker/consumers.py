@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from .models import MapGroup, Map, Hero
@@ -32,8 +33,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 self.room_group_name, {"type": "chat.get.data", "message": "get some data from db"}
             )
         elif message == "set_data":
+            map = text_data_json["map"]
             await self.channel_layer.group_send(
-                self.room_group_name, {"type": "chat.set.data", "message": "set some data to db"}
+                self.room_group_name, {"type": "chat.set.data", "map": map}
             )
         elif message == "user":
             await self.channel_layer.group_send(
@@ -59,10 +61,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({"message": message}))
 
     async def chat_set_data(self, event):
-        message = event["message"]
+        map = event["map"]
+        await sync_to_async(self.set_data_to_db)(map)
 
         # Send message to WebSocket
-        await self.send(text_data=json.dumps({"message": message}))
+        await self.send(text_data=json.dumps({"message": map}))
 
     async def chat_user(self, event):
         message = self.user.username
@@ -75,15 +78,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
         data_dict = {}
         hero_index = 0
         heroes = Hero.objects.all()
+        date_now = datetime.now(timezone.utc)
         for hero in heroes:
             data_dict[hero_index] = {"name": hero.name, "lvl": hero.lvl, "maps": {}}
             maps = hero.maps.all()
             map_list = {}
             for map in maps:
                 if map.map_group.name not in map_list:
-                    map_list[map.map_group.name] = map.name
+                    map_list[map.map_group.name] = {0: {'name': map.name, 'updated_by': map.updated_by, 'updated_at': int((date_now - map.updated_at).total_seconds())}}
                 else:
-                    map_list[map.map_group.name] = {map_list[map.map_group.name], map.name}
+                    map_index = len(map_list[map.map_group.name])
+                    map_list[map.map_group.name][map_index] = {'name': map.name, 'updated_by': map.updated_by, 'updated_at': int((date_now - map.updated_at).total_seconds())}
             data_dict[hero_index]['maps']= map_list
             hero_index += 1
         return str(data_dict)
+    
+    def set_data_to_db(self, map_name):
+        map = Map.objects.get(name = map_name)
+        map.updated_by = self.user
+        map.save()
