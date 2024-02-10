@@ -62,11 +62,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({"message": message}))
 
     async def chat_set_data(self, event):
-        map = event["map"]
-        await sync_to_async(self.set_data_to_db)(map)
+        map_updated = await sync_to_async(self.set_data_to_db)(event["map"])
 
         # Send message to WebSocket
-        await self.send(text_data=json.dumps({"message": map}))
+        await self.send(text_data=json.dumps({"action": "single_data", "message": map_updated}))
 
     async def chat_user(self, event):
         message = self.user.username
@@ -95,6 +94,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return str(data_dict)
     
     def set_data_to_db(self, map_name):
+        date_now = datetime.now(timezone.utc)
         map = Map.objects.get(name = map_name)
         map.updated_by = self.user
         map.save()
+        return str({'name': map.name, 'updated_by': map.updated_by.username, 'updated_at': int((date_now - map.updated_at).total_seconds())})
