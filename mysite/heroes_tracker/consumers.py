@@ -27,25 +27,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
     # Receive message from WebSocket
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        message = text_data_json["message"]
-        if message == "get_data":
+        action = text_data_json["action"]
+        if action == "get_data":
             #await self.channel_layer.group_send(
             #    self.room_group_name, {"type": "chat.get.data", "message": "get some data from db"}
             #)
             await self.chat_get_data(self)
-        elif message == "set_data":
+        elif action == "set_data":
             map = text_data_json["map"]
             await self.channel_layer.group_send(
                 self.room_group_name, {"type": "chat.set.data", "map": map}
             )
-        elif message == "user":
+        elif action == "user":
             await self.channel_layer.group_send(
                 self.room_group_name, {"type": "chat.user"}
             )
-        else:
-            await self.channel_layer.group_send(
-                self.room_group_name, {"type": "chat.message", "message": message}
-            )
+        #else:
+        #    await self.channel_layer.group_send(
+        #        self.room_group_name, {"type": "chat.message", "message": action}
+        #    )
 
     # Receive message from room group
     async def chat_message(self, event):
@@ -54,12 +54,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Send message to WebSocket
         await self.send(text_data=json.dumps({"message": message}))
 
-    async def chat_get_data(self, event = None):
+    async def chat_get_data(self, event):
         
         message = await sync_to_async(self.get_data_from_db)()
 
         # Send message to WebSocket
-        await self.send(text_data=json.dumps({"message": message}))
+        await self.send(text_data=json.dumps({"action": "all_data", "message": message}))
 
     async def chat_set_data(self, event):
         map_updated = await sync_to_async(self.set_data_to_db)(event["map"])
@@ -71,7 +71,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         message = self.user.username
 
         # Send message to WebSocket
-        await self.send(text_data=json.dumps({"message": message}))
+        await self.send(text_data=json.dumps({"action": "user", "message": message}))
 
     def get_data_from_db(self):
         #print(Hero.objects.all().__dict__)
