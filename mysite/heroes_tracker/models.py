@@ -13,7 +13,8 @@ class Map(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(max_length=500)
     updated_at = models.DateTimeField(auto_now=True)
-    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    #updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    updated_by = models.CharField(max_length=100)
     map_group = models.ForeignKey(MapGroup, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):

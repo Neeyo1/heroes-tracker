@@ -12,8 +12,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.clan_name = self.scope["url_route"]["kwargs"]["clan_name"]
         self.room_group_name = f"chat_{self.clan_name}"
-        self.user = self.scope["user"]
-        print(self.user)
+        #self.user = self.scope["user"]
+        self.user = "Anonymous"
 
         # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
@@ -35,13 +35,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.chat_get_data(self)
         elif action == "set_data":
             map = text_data_json["map"]
+            map_updated = await sync_to_async(self.set_data_to_db)(map)
             await self.channel_layer.group_send(
-                self.room_group_name, {"type": "chat.set.data", "map": map}
+                self.room_group_name, {"type": "chat.set.data", "map": map_updated}
             )
         elif action == "get_user":
             await self.channel_layer.group_send(
                 self.room_group_name, {"type": "chat.get.user"}
             )
+        elif action == "set_user":
+            user = text_data_json["user"]
+            self.user = user
+            await self.send(text_data=json.dumps({"message": "OK"}))
         #else:
         #    await self.channel_layer.group_send(
         #        self.room_group_name, {"type": "chat.message", "message": action}
@@ -63,13 +68,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({"action": "all_maps", "message": all_maps}))
 
     async def chat_set_data(self, event):
-        map_updated = await sync_to_async(self.set_data_to_db)(event["map"])
-
         # Send message to WebSocket
-        await self.send(text_data=json.dumps({"action": "single_data", "message": map_updated}))
+        await self.send(text_data=json.dumps({"action": "single_data", "message": event['map']}))
 
     async def chat_get_user(self, event):
-        message = self.user.username
+        message = self.user
 
         # Send message to WebSocket
         await self.send(text_data=json.dumps({"action": "user", "message": message}))
@@ -87,10 +90,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             map_list = {}
             for map in maps:
                 if map.map_group.name not in map_list:
-                    map_list[map.map_group.name] = {0: {'name': map.name, 'updated_by': map.updated_by.username, 'updated_at': int((date_now - map.updated_at).total_seconds())}}
+                    map_list[map.map_group.name] = {0: {'name': map.name, 'updated_by': map.updated_by, 'updated_at': int((date_now - map.updated_at).total_seconds())}}
                 else:
                     map_index = len(map_list[map.map_group.name])
-                    map_list[map.map_group.name][map_index] = {'name': map.name, 'updated_by': map.updated_by.username, 'updated_at': int((date_now - map.updated_at).total_seconds())}
+                    map_list[map.map_group.name][map_index] = {'name': map.name, 'updated_by': map.updated_by, 'updated_at': int((date_now - map.updated_at).total_seconds())}
                 maps_all.append(map.name)    #for client side to track only specific maps
             data_dict[hero_index]['maps']= map_list
             hero_index += 1
@@ -98,7 +101,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     def set_data_to_db(self, map_name):
         date_now = datetime.now(timezone.utc)
-        map = Map.objects.get(name = map_name)
-        map.updated_by = self.user
-        map.save()
-        return str({'name': map.name, 'updated_by': map.updated_by.username, 'updated_at': int((date_now - map.updated_at).total_seconds())})
+        try:
+            map = Map.objects.get(name = map_name)
+            map.updated_by = self.user
+            map.save()
+            return {'name': map.name, 'updated_by': map.updated_by, 'updated_at': int((date_now - map.updated_at).total_seconds())}
+        except:
+            pass
