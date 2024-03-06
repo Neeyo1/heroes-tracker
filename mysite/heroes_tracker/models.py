@@ -26,8 +26,14 @@ class Hero(models.Model):
     lvl = models.IntegerField()
     maps = models.ManyToManyField(Map)
 
+    def __str__(self):
+        return self.name
+
 class Clan(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(max_length=500)
     members = models.ManyToManyField(User)
     admins = models.ManyToManyField(User, related_name = "clan_admin_set")
+
+    def __str__(self):
+        return self.name
