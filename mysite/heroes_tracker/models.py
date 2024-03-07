@@ -32,8 +32,8 @@ class Hero(models.Model):
 class Clan(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(max_length=500)
-    members = models.ManyToManyField(User)
-    admins = models.ManyToManyField(User, related_name = "clan_admin_set")
+    members = models.ManyToManyField(User, blank=True)
+    admins = models.ManyToManyField(User, related_name = "clan_admin_set", blank=True)
 
     def __str__(self):
         return self.name

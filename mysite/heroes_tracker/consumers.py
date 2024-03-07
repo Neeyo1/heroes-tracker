@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 
 from channels.generic.websocket import AsyncWebsocketConsumer
-from .models import MapGroup, Map, Hero
+from .models import MapGroup, Map, Hero, Clan
 from django.core.serializers import serialize
 from asgiref.sync import sync_to_async
 from django.forms.models import model_to_dict
@@ -16,7 +16,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
         #print(self.scope["user"])
         self.user = self.scope["user"]
         #self.user = "Anonymous"
-        print(self.user)
+        print(str(self.user))
+
+        if str(self.user) == "AnonymousUser":
+            return
+
+        clan = await sync_to_async(self.get_all_clans)()
+        if clan == None:
+            return
+        
+        access_to_clan = await sync_to_async(self.check_access_to_clan)(clan)
+        if not access_to_clan:
+            return
 
         # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
@@ -111,3 +122,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return {'name': map.name, 'updated_by': map.updated_by, 'updated_at': int((date_now - map.updated_at).total_seconds())}
         except:
             pass
+
+    def get_all_clans(self):
+        print(self.clan_name)
+        try:
+            clan = Clan.objects.get(name = self.clan_name)
+        except Clan.DoesNotExist:
+            clan = None
+        print(clan)
+        return clan
+    
+    def check_access_to_clan(self, clan):
+        members = clan.members.all()
+        if self.user in members:
+            return True
+        else:
+            return False
