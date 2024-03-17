@@ -31,9 +31,9 @@ ALLOWED_HOSTS = ["*"]
 # Application definition
 
 INSTALLED_APPS = [
+    "corsheaders",
     'daphne',
     'heroes_tracker',
-    "corsheaders",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -138,3 +138,7 @@ CHANNEL_LAYERS = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_CREDENTIALS = True
+
+SESSION_COOKIE_SAMESITE = None

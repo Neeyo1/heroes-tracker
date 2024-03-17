@@ -1,8 +1,10 @@
 import json
 from datetime import datetime, timezone
+from urllib.parse import parse_qs
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from .models import MapGroup, Map, Hero, Clan
+from django.contrib.auth.models import User
 from django.core.serializers import serialize
 from asgiref.sync import sync_to_async
 from django.forms.models import model_to_dict
@@ -13,13 +15,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.clan_name = self.scope["url_route"]["kwargs"]["clan_name"]
         self.room_group_name = f"chat_{self.clan_name}"
         
-        #print(self.scope["user"])
         self.user = self.scope["user"]
-        #self.user = "Anonymous"
         print(str(self.user))
 
         if str(self.user) == "AnonymousUser":
-            return
+            is_user_validated = await sync_to_async(self.validate_user)()
+            if not is_user_validated:
+                return
 
         clan = await sync_to_async(self.get_all_clans)()
         if clan == None:
@@ -138,3 +140,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return True
         else:
             return False
+        
+    def validate_user(self):
+        url_params = parse_qs(self.scope['query_string'].decode('utf8'))
+        print(url_params)
+        try:
+            user = User.objects.get(username=url_params['login'][0])
+            print("User OK")
+        except Exception as e:
+            print(e)
+            return False
+        if not user.check_password(url_params['password'][0]):
+            return False
+        else:
+            self.user = user
+            print("Password OK")
+            return True
